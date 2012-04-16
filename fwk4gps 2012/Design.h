@@ -25,7 +25,7 @@ class iLight;
 class iSound;
 class iHUD;
 const int MAX_CANNONBALLS=100;
-const Colour red(1,0,0);
+const Colour red(0.5,0,0);
 const Colour green(0,1,0);
 const Colour blue(0,0,1);
 const Colour white(0,0,0);
@@ -33,6 +33,7 @@ typedef std::list<iPhysics*> LIST_iPHYSICS;
 class Design : public Coordinator {
    iPhysics* stretcher;
    iPhysics* ambulance;
+   iObject* building;
    LIST_iPHYSICS objects;
    iCollisionSpace* cs_;
 

@@ -140,14 +140,20 @@ iPhysics* Physics::clone(){
 }
 
 Physics::~Physics(){
-	delete bv_;
+   bv_->Delete();
 }
 
 iPhysics* CreatePhysicsBox(float minx, float miny, float minz, 
-	 float maxx, float maxy, float maxz, const Reflectivity* r, float mass,PhysicsType pt, bool hasCollision){
+	 float maxx, float maxy, float maxz, const Reflectivity* r, float mass, PhysicsType pt, bool hasCollision, iTexture* texture){
 
-	iGraphic* box=CreateBox(minx,miny,minz*MODEL_Z_AXIS,maxx,maxy,maxz*MODEL_Z_AXIS);		 
-  	Physics* rc= new Physics(mass,pt,CreateObject(box,r));
+   iObject* box = CreateObject(CreateBox(minx,miny,minz*MODEL_Z_AXIS,maxx,maxy,maxz*MODEL_Z_AXIS), r);
+
+   if (texture)
+   {
+      box->attach(texture);
+   }
+
+  	Physics* rc= new Physics(mass,pt,box);
 	
 	float xsq=maxx-minx;
 	float ysq=maxy-miny;

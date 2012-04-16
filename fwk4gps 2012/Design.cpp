@@ -21,11 +21,12 @@
 #include "MathDefinitions.h" // for MODEL_Z_AXIS
 #include "ModellingLayer.h"  // for MOUSE_BUTTON_SCALE, ROLL_SPEED
 #include "Common_Symbols.h"  // for Action and Sound enumerations
-#include "Physics.h"
+#include "iPhysics.h"
 #include "CSphere.h"
 #include "iSimpleCollisionSpace.h"
 #include "iAPIWindow.h"
-
+#include <vector>
+#include <ctime>
 #include <strsafe.h>
 const wchar_t* orient(wchar_t*, const iFrame*, char, unsigned = 1u);
 const wchar_t* position(wchar_t*, const iFrame*, char = ' ', unsigned = 1u);
@@ -55,13 +56,12 @@ void Design::initialize() {
    Reflectivity bluish = Reflectivity(blue);
    Reflectivity whitish = Reflectivity(white);
    setProjection(0.9f, 1.0f, 1000.0f);
-   setAmbientLight(0.9f, 0.9f, 0.9f);
+   setAmbientLight(1, 1, 1);
    // camera at a distance - in lhs coordinates
     // camera at a distance - in lhs coordinates
    iCamera* camera = CreateCamera();
    camera->translate(0, 190,-500);
    camera->setRadius(17.8f);
-   //camera->rotatex(3.1459/4.0f);
    
     lastUpdate = now;	
 
@@ -75,16 +75,22 @@ void Design::initialize() {
    lasttextupdate=now;
 
    // game ----------------------------------------------------------------------
-   stretcher = CreatePhysicsBox(-25, -2.5, 0, 25, 2.5, 0, &bluish, 1, PHYS_Floating, true);
+   stretcher = CreatePhysicsBox(-40, -5, 0, 40, 5, 0, &bluish, 1, PHYS_Floating, true);
    iAPIWindow* win = getWindow();
    stretcher->translate(0, 0, 0);
 
-      iPhysics* fallingBox = CreatePhysicsBox(-5, -5, -5, 5, 5, 5, &whitish, 1, PHYS_Falling, true);
-      fallingBox->translate(-150, 350, 0);
-      fallingBox->setVelocity(Vector(5, 20, 0));
-      fallingBox->addBodyForce(Vector(0, -10, 0));
-      fallingBox->setCollision(CreateCSphere(fallingBox, 5));
-      objects.insert(objects.end(), fallingBox);
+   building = CreateObject(CreateBox(0, 0, 0, 100, 550, 0), &redish);
+   building->translate(-400, 200, 0);
+
+   ambulance = CreatePhysicsBox(-100, -50, 0, 100, 50, 0, &whitish, 1, PHYS_Floating, true);
+   ambulance->translate(400, -20, 0);
+
+   iPhysics* fallingBox = CreatePhysicsBox(-5, -5, -5, 5, 5, 5, &whitish, 1, PHYS_Falling, true);
+   fallingBox->translate(-400, 350, 0);
+   fallingBox->setVelocity(Vector(5, 20, 0));
+   fallingBox->addBodyForce(Vector(0, -10, 0));
+   fallingBox->setCollision(CreateCSphere(fallingBox, 5));
+   objects.insert(objects.end(), fallingBox);
 }
 
 // update updates the position and orientation of each object according to the 
@@ -92,41 +98,60 @@ void Design::initialize() {
 //
 void Design::update() 
 {
-   bool translate = false;
+   bool
+      translate = false,
+      rotate    = false;
+
    int 
       delta = now - lastUpdate,
-      dX = 0,
-      dY = 0;
-   static int accum = delta;
+      dX = 0;
+   float wZ = 0;
+   static int 
+      accum = delta,
+      next  = 3000,
+      score = 0,
+      life = 5,
+      update = true;
    wchar_t str[MAX_DESC + 1];
-   Vector position = stretcher->position();
-   StringCbPrintfW(str, MAX_DESC, L"Stretcher position X: %.2f, Y: %.2f", position.x, position.y); 
-   deltatxt_->set(str);
+
+   if (!update)
+   {
+      StringCbPrintfW(str, MAX_DESC, L"GAME OVER"); 
+      deltatxt_->set(str);
+
+      StringCbPrintfW(str, MAX_DESC, L"Score: %d", score);
+      velocitytxt_->set(str);
+      return;
+   }
 
    if (pressed(MOVE_LEFT))
    {
       translate = true;
-      dX = - 10;
+      dX = -10;
    }
    
    if (pressed(ROTATE_LEFT))
    {
-      translate = true;
+      rotate = true;
+      wZ = -0.1f;
    }
 
    if (pressed(MOVE_RIGHT))
    {
       translate = true;
-      dX = +10;
+      dX = 10;
    }
 
    if (pressed(ROTATE_RIGHT))
    {
-      translate = true;
+      rotate = true;
+      wZ = 0.1f;
    }
 
    if (translate)
-      stretcher->translate(dX, dY, position.z);
+      stretcher->translate(dX, 0, 0);
+   if (rotate)
+      stretcher->rotatez(wZ);
   // stretcher->update(delta);
 
    const CollisionContact* cc;
@@ -138,19 +163,53 @@ void Design::update()
       float vrn, J;
       Vector force,n,relativeVelocity;
       Vector g1deltap, g2deltap;
-
       for(int i = 1; i < nc ;i++)
       {
          cc = cs_->getContactList(i);
+         iPhysics* g1 = cc->g1->getPhysics();
+         iPhysics* g2 = cc->g2->getPhysics();
          
-         StringCbPrintfW(str, MAX_DESC, L"address g1: %x", cc->g1->getPhysics());
-         velocitytxt_->set(str);
-
-         if(cc->g1->getPhysics() == stretcher && cc->g2->getPhysics() != stretcher)
+         
+         if (g1 == ambulance && g2 != ambulance)
          {
+            if (g2 == stretcher)
+            {
+               stretcher->translate(-dX, 0, 0);
+            }
+
+            cs_->remove(g2->collisionGeometry());   
+            objects.remove(g2);
+
+            StringCbPrintfW(str, MAX_DESC, L"Score: %d", ++score);
+            velocitytxt_->set(str);
+         }
+      }
+   }
+
+   cs_->populateContactList(delta/UNITS_PER_SEC);
+   nc=cs_->getNumContacts();
+
+   if(nc!=0)
+   {
+      float vrn, J;
+      Vector force,n,relativeVelocity;
+      Vector g1deltap, g2deltap;
+         for(int i = 1; i < nc ;i++)
+      {
+         cc = cs_->getContactList(i);
+         iPhysics* g1 = cc->g1->getPhysics();
+         iPhysics* g2 = cc->g2->getPhysics();
+         
+         if(g1 == stretcher && g2 != stretcher)
+         {
+            if (g2 == ambulance)
+            {
+               stretcher->translate(-dX, 0, 0);
+               continue;
+            }
+
             n = cc->normal;
-            Vector v1 = cc->g2->getPhysics()->velocity();
-            relativeVelocity =  - cc->g2->getPhysics()->velocity();
+            relativeVelocity = -g2->velocity();
 
             // normal component of the relative velocity
             vrn = dot(relativeVelocity, n);
@@ -158,18 +217,12 @@ void Design::update()
             // magnitude of the impulse at collision
             J = - vrn * 2.0f / (1.0f / cc->g1->getPhysics()->mass() + 1.0f / cc->g2->getPhysics()->mass());
 
-
             // force generated by the impulse
             force = J * n / (float(delta)/float(UNITS_PER_SEC));
 
             // apply the force to both objects
-
             cc->g2->getPhysics()->addimpulseForce(-1 * force);
-
-            //push objects apart so that it doesn't keep colliding
-            
-            Vector v2 = v1 + (-J * n)/ cc->g2->getPhysics()->mass();
-            cc->g2->getPhysics()->setVelocity(v2);
+            cc->g2->getPhysics()->setVelocity(g2->velocity() + (-J * n)/ cc->g2->getPhysics()->mass());
 
             //push objects apart so that it doesn't keep colliding
             float massTotal = (cc->g1->getPhysics()->mass() + cc->g2->getPhysics()->mass()) * 0.85f;
@@ -182,21 +235,56 @@ void Design::update()
          }
       }
    }
+
    accum += delta;
-   if (accum > 1500)
+
+   if (accum > next)
    {
-      /*Reflectivity whitish = Reflectivity(white);
+      Reflectivity whitish = Reflectivity(white);
       iPhysics* fallingBox = CreatePhysicsBox(-5, -5, -5, 5, 5, 5, &whitish, 1, PHYS_Falling, true);
-      fallingBox->translate(-150, 350, 0);
-      fallingBox->setVelocity(Vector(5, 20, 0));
+      fallingBox->translate(-400, 350, 0);
+      srand( time(0) );
+      fallingBox->setVelocity(Vector(rand() % 30, rand() %30, 0));
       fallingBox->addBodyForce(Vector(0, -10, 0));
       fallingBox->setCollision(CreateCSphere(fallingBox, 5));
-      objects.insert(objects.end(), fallingBox);*/
+      objects.insert(objects.end(), fallingBox);
       accum = 0;
+      next -= 100;
+
+      if (next < 0)
+      {
+         next = 100;
+      }
    }
 
-   for (LIST_iPHYSICS::iterator itr = objects.begin(); itr != objects.end(); ++itr)
+   Vector stretchPos = stretcher->position();
+   LIST_iPHYSICS::iterator itr = objects.begin();
+
+   while (itr != objects.end())
    {
+      iPhysics* object = *itr;
+      Vector position = object->position();
+
+      if (position.y < stretchPos.y)
+      {
+         if (--life < 0)
+         {
+            StringCbPrintfW(str, MAX_DESC, L"Your lost "); 
+            deltatxt_->set(str);
+
+            update = false;
+         }
+
+         cs_->remove(object->collisionGeometry());
+         itr = objects.erase(itr);
+         
+         StringCbPrintfW(str, MAX_DESC, L"Life left: %d ", life); 
+         deltatxt_->set(str);
+
+         continue;
+      }
+
       (*itr)->update(delta);
+      ++itr;
    }
 }

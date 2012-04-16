@@ -26,7 +26,7 @@ class Physics:public iPhysics{
 	Matrix invMomentInertia_; //the inverse of the mass moment of inertia matrix.
 
 	PhysicsType physicsType_;
-	iCollisionGeometry* cg_;
+
 
 	void	setVelocity(Vector v)					{velocity_=v;}
 	void	setAngularVelocity(Vector v)			{angVel_=v;}
@@ -34,6 +34,7 @@ class Physics:public iPhysics{
 	void	setAcceleration(Vector v)				{acceleration_=v;}
 
 public:
+   	iCollisionGeometry* cg_;
     Physics(float mass, PhysicsType pt, iObject* bv);
 	~Physics();
 
