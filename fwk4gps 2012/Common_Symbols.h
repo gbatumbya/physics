@@ -49,13 +49,10 @@ typedef enum LightType {
 //
 // enumeration constants
 typedef enum Action {
-	FIRE_CANNONBALL,				//space
-	CANNON_ROTATE_LEFT,				//A
-	CANNON_ROTATE_RIGHT,			//D
-	CANNON_ROTATE_BACK,				//S
-	CANNON_ROTATE_FWD,				//W
-	CLOCKWISE_MOMENT,				//Q
-	COUNTERCLOCKWISE_MOMENT,		//E
+	MOVE_LEFT,  // left
+	MOVE_RIGHT, // right
+	ROTATE_LEFT,  // up
+	ROTATE_RIGHT, // down
 	AUD_VOLUME_INC,
 	AUD_VOLUME_DEC,
 	AUD_SPEED_UP,
@@ -72,13 +69,10 @@ typedef enum Action {
 // (descriptions should not exceed MAX_DESC characters)
 //
 #define ACTION_DESCRIPTIONS {\
-	L"fire cannonball",   \
-	L"Rotate Cannon to the left",   \
-	L"Rotate Cannon to the right",   \
-	L"Rotate Cannon to the back",   \
-	L"Rotate Cannon to the front",   \
-	L"clockwise moment to platform", \
-	L"counterclockwise moment to platform", \
+	L"move left",   \
+	L"move right",   \
+	L"Rotate left",   \
+	L"Rotate right",   \
 	L"Increase Volume", \
 	L"Decrease Volume", \
 	L"Speed Up Sound",  \

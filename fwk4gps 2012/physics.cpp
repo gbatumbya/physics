@@ -103,7 +103,7 @@ void Physics::update(int delta){
 	//calculate the amount of force being applied to object for a split second
 	Vector appliedForce(impulseForce_+bodyForce_);
 	acceleration_=appliedForce/mass_;
-	//reduce the impulse force to 0
+	
 
 	// impulse moments
 	Matrix R  = rotation();
@@ -113,10 +113,10 @@ void Physics::update(int delta){
 	setAngularAcceleration((ml - cross(wl*momentInertia_ ,wl)) * invMomentInertia_ * R);
 	updateKinematics(dt);
 	moment_    = Vector();
-	impulseForce_=Vector();   
+	impulseForce_=Vector();  //reduce the impulse force to 0  
 	//setAngularAcceleration(Vector());
 	//calculate a new acceleration for the rest of the frame based soley on the body force
-	//acceleration_=bodyForce_/mass_;
+//	acceleration_=bodyForce_/mass_;
 }
 void Physics::setMomentInertia(const Vector& mi){
 	momentInertia_=Matrix(mi);

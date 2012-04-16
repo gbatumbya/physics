@@ -50,6 +50,7 @@ public:
 	void   rotate(const Vector& axis, float rad) { bv_->rotate(axis,rad);}
 	void    translate(float x, float y, float z) {bv_->translate(x,y,z);}
 	void addimpulseForce(Vector v){impulseForce_+=v;}
+   void addBodyForce(Vector v) {bodyForce_+=v;}
 	float mass() const{return mass_;}
 
 	Vector angularVelocity() const {return parent_?angVel_+parent_->angularVelocity():angVel_;}

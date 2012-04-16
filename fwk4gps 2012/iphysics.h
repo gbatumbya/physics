@@ -49,6 +49,7 @@ public:
 	virtual void setMomentInertia(const Vector& i)					= 0;
 	virtual iPhysics* clone()										= 0;
 	virtual void addimpulseForce(Vector v)							= 0;
+   virtual void addBodyForce(Vector v)                              = 0;
 	virtual float mass() const										= 0;
 	virtual ~iPhysics(){}
 

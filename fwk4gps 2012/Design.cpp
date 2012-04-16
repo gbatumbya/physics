@@ -24,6 +24,7 @@
 #include "Physics.h"
 #include "CSphere.h"
 #include "iSimpleCollisionSpace.h"
+#include "iAPIWindow.h"
 
 #include <strsafe.h>
 const wchar_t* orient(wchar_t*, const iFrame*, char, unsigned = 1u);
@@ -38,8 +39,8 @@ const wchar_t* onOff(wchar_t*, const iSwitch*);
 //
 Design::Design(void* h, int s) : Coordinator(h, s) {
 
-	cs_=CreateSimpleCollisionSpace(60);
-	CollisionGeometry::setGlobalCollisionSpace(cs_);
+   cs_=CreateSimpleCollisionSpace(60);
+   CollisionGeometry::setGlobalCollisionSpace(cs_);
 }
 
 // initialize initializes the general display design coordinator, creates the 
@@ -49,194 +50,153 @@ void Design::initialize() {
 
        // general display design
     //
-	Reflectivity redish = Reflectivity(red);
-	Reflectivity greenish = Reflectivity(green);
-	Reflectivity bluish = Reflectivity(blue);
-	Reflectivity whitish = Reflectivity(white);
-    setProjection(0.9f, 1.0f, 1000.0f);
-    setAmbientLight(0.9f, 0.9f, 0.9f);
-	// camera at a distance - in lhs coordinates
+   Reflectivity redish = Reflectivity(red);
+   Reflectivity greenish = Reflectivity(green);
+   Reflectivity bluish = Reflectivity(blue);
+   Reflectivity whitish = Reflectivity(white);
+   setProjection(0.9f, 1.0f, 1000.0f);
+   setAmbientLight(0.9f, 0.9f, 0.9f);
+   // camera at a distance - in lhs coordinates
     // camera at a distance - in lhs coordinates
-    iCamera* camera = CreateCamera();
-    camera->translate(0,250,-250);
-    camera->setRadius(17.8f);
-	camera->rotatex(3.1459/4.0f);
-	platform_=CreatePhysicsBox(-20,-20,-20,20,20,20,&bluish,8,PHYS_FixedInSpace);
-	cannon_=CreatePhysicsBox(-5,0,-5,5,40,5,&redish,1000,PHYS_FixedInSpace);
-	cannon_->attachTo(platform_,0,0);
-	cannon_->translate(0,40,0);
-	cannonball_=CreatePhysicsBox(-2.5,-2.5,-2.5,2.5,2.5,2.5,&whitish,1,PHYS_Floating);
-	cannonball_->attachTo(cannon_,0,0);
-	cannonball_->translate(0,60,0);
-
-
-	bigGreenBox_=CreatePhysicsBox(-100,-5,-100,100,5,100,&greenish,8,PHYS_FixedInSpace,true);
-	bigGreenBox_->translate(-100,0,0);
-	bigBlueBox_=CreatePhysicsBox(-5,-50,-100,5,50,100,&bluish,8,PHYS_Floating,true);
-//    bigGreenBox_->translate(0,0,0);
-	bigBlueBox_->translate(-100,50,0);
-
-	lastfired_=now;
+   iCamera* camera = CreateCamera();
+   camera->translate(0, 190,-500);
+   camera->setRadius(17.8f);
+   //camera->rotatex(3.1459/4.0f);
+   
     lastUpdate = now;	
-//	abox->setVelocity(Vector(0,40,0));
-//	abox->setAcceleration(Vector(0,-9.8,0));
 
-//	abox->translate(0,200,0);
-	hud = CreateHUD(0.72f, 0.01f, 0.27f, 0.99f, CreateTexture(HUD_IMAGE));
-	//setTimerText(CreateText(Rectf(0.0f, 0.05f, 0.2f, 0.15f), hud, L"", 
-    //    TEXT_HEIGHT, TEXT_TYPEFACE, TEXT_LEFT));
-
+    hud = CreateHUD(0.72f, 0.01f, 0.27f, 0.99f, CreateTexture(HUD_IMAGE));
     // cameras ----------------------------------------------------------------
 
+   velocitytxt_=CreateText(Rectf(0.05f,0.27f,0.95f,0.37f),hud,L"",TEXT_HEIGHT,TEXT_TYPEFACE,TEXT_LEFT);
+   deltatxt_=CreateText(Rectf(0.05f,0.17f,0.95f,0.27f),hud,L"",TEXT_HEIGHT,TEXT_TYPEFACE,TEXT_LEFT);
+   positiontxt_=CreateText(Rectf(0.05f,0.38f,0.95f,0.48f),hud,L"",TEXT_HEIGHT,TEXT_TYPEFACE,TEXT_LEFT);
 
+   lasttextupdate=now;
 
-	
-	
-	velocitytxt_=CreateText(Rectf(0.05f,0.27f,0.95f,0.37f),hud,L"",TEXT_HEIGHT,TEXT_TYPEFACE,TEXT_LEFT);
-	deltatxt_=CreateText(Rectf(0.05f,0.17f,0.95f,0.27f),hud,L"",TEXT_HEIGHT,TEXT_TYPEFACE,TEXT_LEFT);
-	positiontxt_=CreateText(Rectf(0.05f,0.38f,0.95f,0.48f),hud,L"",TEXT_HEIGHT,TEXT_TYPEFACE,TEXT_LEFT);
+   // game ----------------------------------------------------------------------
+   stretcher = CreatePhysicsBox(-25, -2.5, 0, 25, 2.5, 0, &bluish, 1, PHYS_Floating, true);
+   iAPIWindow* win = getWindow();
+   stretcher->translate(0, 0, 0);
 
-	iGraphic* grid=CreateGrid(-150, 150, 20);
-    CreateObject(grid)->translate(-60,0,0);
-	lasttextupdate=now;
-	
-
+      iPhysics* fallingBox = CreatePhysicsBox(-5, -5, -5, 5, 5, 5, &whitish, 1, PHYS_Falling, true);
+      fallingBox->translate(-150, 350, 0);
+      fallingBox->setVelocity(Vector(5, 20, 0));
+      fallingBox->addBodyForce(Vector(0, -10, 0));
+      fallingBox->setCollision(CreateCSphere(fallingBox, 5));
+      objects.insert(objects.end(), fallingBox);
 }
 
 // update updates the position and orientation of each object according to the 
 // actions initiated by the user
 //
-void Design::update() {
+void Design::update() 
+{
+   bool translate = false;
+   int 
+      delta = now - lastUpdate,
+      dX = 0,
+      dY = 0;
+   static int accum = delta;
+   wchar_t str[MAX_DESC + 1];
+   Vector position = stretcher->position();
+   StringCbPrintfW(str, MAX_DESC, L"Stretcher position X: %.2f, Y: %.2f", position.x, position.y); 
+   deltatxt_->set(str);
 
-    int delta;
-    int dr = 0;  // roll the right box around its x axis
-    int ds = 0;  // spin the right box around its y axis
-    int dt = 0;  // roll the top   box around its z axis
-    int dw = 0;  // roll the spot light around the x axis
-	float vrn, J;
-	Vector force,n,relativeVelocity;
-	Vector g1deltap, g2deltap;
-	const CollisionContact* cc;
-	wchar_t str[MAX_DESC + 1];
-   delta  = now - lastUpdate;
-   if(pressed(FIRE_CANNONBALL)&& (now-lastfired_)>UNITS_PER_SEC/2.0f){
-	    lastfired_=now;
-	    iPhysics* nf=cannonball_->clone();
-		nf->attachTo(NULL,100,0);
-		flyinglist_.insertAtFront(nf);
-		nf->setCollision(CreateCSphere(nf,2.5));
+   if (pressed(MOVE_LEFT))
+   {
+      translate = true;
+      dX = - 10;
    }
-   if(pressed(CANNON_ROTATE_LEFT)){
-	   cannon_->rotate(Vector(0,0,1),(delta/1000.0f)*(3.14159f/4.0f));
+   
+   if (pressed(ROTATE_LEFT))
+   {
+      translate = true;
    }
-   if(pressed(CANNON_ROTATE_RIGHT)){
-	   cannon_->rotate(Vector(0,0,-1),(delta/1000.0f)*(3.14159f/4.0f));
+
+   if (pressed(MOVE_RIGHT))
+   {
+      translate = true;
+      dX = +10;
    }
-   if(pressed(CANNON_ROTATE_FWD)){
-	   cannon_->rotate(Vector(1,0,0),(delta/1000.0f)*(3.14159f/4.0f));
+
+   if (pressed(ROTATE_RIGHT))
+   {
+      translate = true;
    }
-   if(pressed(CANNON_ROTATE_BACK)){
-	   cannon_->rotate(Vector(-1,0,0),(delta/1000.0f)*(3.14159f/4.0f));
-   }
-   if(pressed(CLOCKWISE_MOMENT)){
-	   platform_->addMoment(Vector(0,2000,0));
-   }
-   if(pressed(COUNTERCLOCKWISE_MOMENT)){
-	   platform_->addMoment(Vector(0,-2000,0));
-   }
-   flyinglist_.goStart();
-   iPhysics* tmp;
-   Vector v;
-   if(flyinglist_.curr()){
-	   tmp=flyinglist_.curr()->data();
-	   v=tmp->position();
-       StringCbPrintfW(str,MAX_DESC,L"positionX : %.2lf",v.x);
-       deltatxt_->set(str);
-   }
+
+   if (translate)
+      stretcher->translate(dX, dY, position.z);
+  // stretcher->update(delta);
+
+   const CollisionContact* cc;
    cs_->populateContactList(delta/UNITS_PER_SEC);
    int nc=cs_->getNumContacts();
 
-   if(nc!=0){
-	   for(int i=0;i<nc;i++){
-		   cc=cs_->getContactList(i);
-		    StringCbPrintfW(str,MAX_DESC,L"address g1: %x",cc->g1->getPhysics());
-		    velocitytxt_->set(str);
+   if(nc!=0)
+   {
+      float vrn, J;
+      Vector force,n,relativeVelocity;
+      Vector g1deltap, g2deltap;
 
-		   if(cc->g1->getPhysics()!=bigBlueBox_ && cc->g1->getPhysics()!=bigGreenBox_){
-				  n=cc->normal;
-			 relativeVelocity = cc->g1->getPhysics()->velocity() - cc->g2->getPhysics()->velocity();
+      for(int i = 1; i < nc ;i++)
+      {
+         cc = cs_->getContactList(i);
+         
+         StringCbPrintfW(str, MAX_DESC, L"address g1: %x", cc->g1->getPhysics());
+         velocitytxt_->set(str);
 
-		    // normal component of the relative velocity
-			 vrn = dot(relativeVelocity, n);
-	
-		    // magnitude of the impulse at collision
-			 J = - vrn * 2.0f / (1.0f / cc->g1->getPhysics()->mass() + 1.0f / cc->g2->getPhysics()->mass());
+         if(cc->g1->getPhysics() == stretcher && cc->g2->getPhysics() != stretcher)
+         {
+            n = cc->normal;
+            Vector v1 = cc->g2->getPhysics()->velocity();
+            relativeVelocity =  - cc->g2->getPhysics()->velocity();
 
+            // normal component of the relative velocity
+            vrn = dot(relativeVelocity, n);
 
-		    // force generated by the impulse
-		    force = J * n / (float(delta)/float(UNITS_PER_SEC));
-
-			 // apply the force to both objects
-
-			cc->g1->getPhysics()->addimpulseForce(force);
-			cc->g2->getPhysics()->addimpulseForce(-1*force);
-
-			//push objects apart so that it doesn't keep colliding
-			float massTotal = (cc->g1->getPhysics()->mass() + cc->g2->getPhysics()->mass()) * 0.85f;
-			float rbd1mf = cc->g2->getPhysics()->mass() / massTotal;
-			float rbd2mf = cc->g1->getPhysics()->mass() / massTotal;
-			Vector g1deltap (-1*(rbd1mf * cc->depth * n));
-			Vector g2deltap (rbd2mf * cc->depth * n);
- 			cc->g1->getPhysics()->translate(g1deltap.x,g1deltap.y,g1deltap.z);
- 			cc->g2->getPhysics()->translate(g2deltap.x,g2deltap.y,g2deltap.z);
-		   }
-		   if(cc->g2->getPhysics()!=bigBlueBox_ && cc->g2->getPhysics()!=bigGreenBox_){
- 			  n=cc->normal;
-
-			       
-			 relativeVelocity = cc->g1->getPhysics()->velocity() - cc->g2->getPhysics()->velocity();
-
-			// normal component of the relative velocity
-			 vrn = dot(relativeVelocity, n);
-
-		    // magnitude of the impulse at collision
-			 J = - vrn * 2.0f / (1.0f / cc->g1->getPhysics()->mass() + 1.0f / cc->g2->getPhysics()->mass());
+            // magnitude of the impulse at collision
+            J = - vrn * 2.0f / (1.0f / cc->g1->getPhysics()->mass() + 1.0f / cc->g2->getPhysics()->mass());
 
 
-			 // force generated by the impulse
-		    force = J * n / (float(delta)/float(UNITS_PER_SEC));
+            // force generated by the impulse
+            force = J * n / (float(delta)/float(UNITS_PER_SEC));
 
-			 // apply the force to both objects
-			cc->g1->getPhysics()->addimpulseForce(force);
-			cc->g2->getPhysics()->addimpulseForce(-1*force);
+            // apply the force to both objects
 
-			//push objects apart
-			float massTotal = (cc->g1->getPhysics()->mass() + cc->g2->getPhysics()->mass()) * 0.85f;
-			float rbd1mf = cc->g2->getPhysics()->mass() / massTotal;
-			 float rbd2mf = cc->g1->getPhysics()->mass() / massTotal;
-			g1deltap=Vector (-1*(rbd1mf * cc->depth * n));
-			g2deltap=Vector (rbd2mf * cc->depth * n);
- 			cc->g1->getPhysics()->translate(g1deltap.x,g1deltap.y,g1deltap.z);
- 			cc->g2->getPhysics()->translate(g2deltap.x,g2deltap.y,g2deltap.z);	
-		   }
-	   }
+            cc->g2->getPhysics()->addimpulseForce(-1 * force);
+
+            //push objects apart so that it doesn't keep colliding
+            
+            Vector v2 = v1 + (-J * n)/ cc->g2->getPhysics()->mass();
+            cc->g2->getPhysics()->setVelocity(v2);
+
+            //push objects apart so that it doesn't keep colliding
+            float massTotal = (cc->g1->getPhysics()->mass() + cc->g2->getPhysics()->mass()) * 0.85f;
+            float rbd1mf = cc->g1->getPhysics()->mass() / massTotal;
+            float rbd2mf = cc->g2->getPhysics()->mass() / massTotal;
+            Vector g1deltap (-1*(rbd1mf * cc->depth * n));
+            Vector g2deltap (rbd2mf * cc->depth * n);
+
+            cc->g2->getPhysics()->translate(g2deltap.x,g2deltap.y,g2deltap.z);
+         }
+      }
    }
-   cannonball_->update(delta);
-   cannon_->update(delta);
-   platform_->update(delta);
-   flyinglist_.goStart();
-   while(flyinglist_.curr()){
-	   iPhysics* cb=flyinglist_.curr()->data();
- 	   cb->update(delta);
-
-      if(cb->position().y < -3){
-		   cs_->remove(cb->collisionGeometry());
-		   flyinglist_.removeCurrent();
-		   delete cb;
-	   }
-	   else{
-		   flyinglist_.goNext();
-	   }
+   accum += delta;
+   if (accum > 1500)
+   {
+      /*Reflectivity whitish = Reflectivity(white);
+      iPhysics* fallingBox = CreatePhysicsBox(-5, -5, -5, 5, 5, 5, &whitish, 1, PHYS_Falling, true);
+      fallingBox->translate(-150, 350, 0);
+      fallingBox->setVelocity(Vector(5, 20, 0));
+      fallingBox->addBodyForce(Vector(0, -10, 0));
+      fallingBox->setCollision(CreateCSphere(fallingBox, 5));
+      objects.insert(objects.end(), fallingBox);*/
+      accum = 0;
    }
- 
+
+   for (LIST_iPHYSICS::iterator itr = objects.begin(); itr != objects.end(); ++itr)
+   {
+      (*itr)->update(delta);
+   }
 }
