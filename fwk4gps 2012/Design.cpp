@@ -91,6 +91,13 @@ void Design::initialize() {
    fallingBox->addBodyForce(Vector(0, -10, 0));
    fallingBox->setCollision(CreateCSphere(fallingBox, 5));
    objects.insert(objects.end(), fallingBox);
+
+   wchar_t str[MAX_DESC + 1];
+   StringCbPrintfW(str, MAX_DESC, L"Score: 0");
+   velocitytxt_->set(str);
+
+   StringCbPrintfW(str, MAX_DESC, L"Life left: 5"); 
+   deltatxt_->set(str);
 }
 
 // update updates the position and orientation of each object according to the 
