@@ -365,7 +365,11 @@ bool APIDisplay::setup() {
 void APIDisplay::setProjection(void* projection) {
 
 	if (d3dd)
-		d3dd->SetTransform(D3DTS_PROJECTION, (D3DXMATRIX*)projection);
+   {
+      D3DXMATRIX matrix;
+      d3dd->SetTransform(D3DTS_PROJECTION, D3DXMatrixOrthoLH(&matrix, width, height, 1.0f, 1000.0f));
+		//d3dd->SetTransform(D3DTS_PROJECTION, (D3DXMATRIX*)projection);
+   }
 }
 
 // setupLighting sets the lighting parameters on the graphics card

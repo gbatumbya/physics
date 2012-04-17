@@ -26,7 +26,7 @@ class Physics:public iPhysics{
 	Matrix invMomentInertia_; //the inverse of the mass moment of inertia matrix.
 
 	PhysicsType physicsType_;
-	iCollisionGeometry* cg_;
+
 
 	void	setVelocity(Vector v)					{velocity_=v;}
 	void	setAngularVelocity(Vector v)			{angVel_=v;}
@@ -34,6 +34,7 @@ class Physics:public iPhysics{
 	void	setAcceleration(Vector v)				{acceleration_=v;}
 
 public:
+   	iCollisionGeometry* cg_;
     Physics(float mass, PhysicsType pt, iObject* bv);
 	~Physics();
 
@@ -50,6 +51,7 @@ public:
 	void   rotate(const Vector& axis, float rad) { bv_->rotate(axis,rad);}
 	void    translate(float x, float y, float z) {bv_->translate(x,y,z);}
 	void addimpulseForce(Vector v){impulseForce_+=v;}
+   void addBodyForce(Vector v) {bodyForce_+=v;}
 	float mass() const{return mass_;}
 
 	Vector angularVelocity() const {return parent_?angVel_+parent_->angularVelocity():angVel_;}

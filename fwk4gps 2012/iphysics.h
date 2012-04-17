@@ -49,6 +49,7 @@ public:
 	virtual void setMomentInertia(const Vector& i)					= 0;
 	virtual iPhysics* clone()										= 0;
 	virtual void addimpulseForce(Vector v)							= 0;
+   virtual void addBodyForce(Vector v)                              = 0;
 	virtual float mass() const										= 0;
 	virtual ~iPhysics(){}
 
@@ -59,6 +60,6 @@ public:
 };
 extern "C"
 iPhysics* CreatePhysicsBox(float minx, float miny, float minz, 
-  float maxx, float maxy, float maxz, const Reflectivity* r, float mass, PhysicsType pt, bool hasCollision=false);
+float maxx, float maxy, float maxz, const Reflectivity* r, float mass, PhysicsType pt, bool hasCollision=false, iTexture *texture = 0);
 
 #endif

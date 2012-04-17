@@ -13,8 +13,7 @@
 
 // initial mappings of actions to keys
 //
-#define ACTION_KEY_MAP {KEY_SPACE,KEY_A,KEY_D,KEY_S,KEY_W,\
-KEY_Q,KEY_E,\
+#define ACTION_KEY_MAP {KEY_LEFT,KEY_RIGHT,KEY_UP,KEY_DOWN,\
 KEY_F3,KEY_F4,KEY_F5,KEY_F6,KEY_F1,KEY_F2,KEY_F7,KEY_F8,KEY_F9\
 }
 

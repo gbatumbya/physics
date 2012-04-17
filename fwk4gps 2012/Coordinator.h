@@ -118,6 +118,7 @@ class Coordinator : public iCoordinator {
     int  change(Action a) const;
     const wchar_t* soundFile (ModelSound s) const;
     virtual ~Coordinator();
+    iAPIWindow* getWindow()const {return window;}
 
   public:
     static iCoordinator* Address() { return coordinator; }
