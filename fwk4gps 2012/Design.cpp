@@ -28,6 +28,7 @@
 #include <vector>
 #include <ctime>
 #include <strsafe.h>
+#include <algorithm>
 const wchar_t* orient(wchar_t*, const iFrame*, char, unsigned = 1u);
 const wchar_t* position(wchar_t*, const iFrame*, char = ' ', unsigned = 1u);
 const wchar_t* onOff(wchar_t*, const iSwitch*);
@@ -85,7 +86,7 @@ void Design::initialize() {
    ambulance = CreatePhysicsBox(-100, -20, 0, 100, 20, 0, &whitish, 1, PHYS_Floating, true);
    ambulance->translate(400, -20, 0);
 
-   iPhysics* fallingBox = CreatePhysicsBox(-5, -5, -5, 5, 5, 5, &whitish, 1, PHYS_Falling, true);
+   iPhysics* fallingBox = CreatePhysicsBox(-8, -8, -8, 8, 8, 8, &whitish, 1, PHYS_Falling, true);
    fallingBox->translate(-350, 350, 0);
    fallingBox->setVelocity(Vector(5, 20, 0));
    fallingBox->addBodyForce(Vector(0, -10, 0));
@@ -106,19 +107,20 @@ void Design::initialize() {
 void Design::update() 
 {
    bool
-      translate = false,
-      rotate    = false;
-
+         translate = false,
+         rotate    = false;
    int 
-      delta = now - lastUpdate,
-      dX = 0;
+         delta = now - lastUpdate,
+         dX = 0;
    float wZ = 0;
    static int 
-      accum = delta,
-      next  = 3000,
-      score = 0,
-      life = 5,
-      update = true;
+         accum    = delta,
+         next     = 3000,
+         score    = 0,
+         life     = 5,
+         update   = true,
+         level    = 0,
+         bottom   = 0;
    wchar_t str[MAX_DESC + 1];
 
    if (!update)
@@ -140,7 +142,8 @@ void Design::update()
    if (pressed(ROTATE_LEFT))
    {
       rotate = true;
-      wZ = -0.1f;
+      wZ = -0.05f;
+      bottom -= 2;
    }
 
    if (pressed(MOVE_RIGHT))
@@ -152,7 +155,8 @@ void Design::update()
    if (pressed(ROTATE_RIGHT))
    {
       rotate = true;
-      wZ = 0.1f;
+      wZ = 0.05f;
+      bottom -= 2;
    }
 
    if (translate)
@@ -202,7 +206,8 @@ void Design::update()
 
             // apply the force to both objects
             cc->g2->getPhysics()->addimpulseForce(-1 * force);
-            cc->g2->getPhysics()->setVelocity(g2->velocity() + (-J * n)/ cc->g2->getPhysics()->mass());
+            // lose 2% of velocity
+            cc->g2->getPhysics()->setVelocity(0.8f * (g2->velocity() + (-J * n)/ cc->g2->getPhysics()->mass()));
 
             //push objects apart so that it doesn't keep colliding
             float massTotal = (cc->g1->getPhysics()->mass() + cc->g2->getPhysics()->mass()) * 0.85f;
@@ -221,8 +226,10 @@ void Design::update()
                stretcher->translate(-dX, 0, 0);
             }
 
-            toRemove.insert(toRemove.begin(), g2);
+            if (std::find(objects.begin(), objects.end(), g2) == objects.end())
+               continue;
 
+            toRemove.insert(toRemove.begin(), g2);
             StringCbPrintfW(str, MAX_DESC, L"Score: %d", ++score);
             velocitytxt_->set(str);
          }
@@ -241,18 +248,23 @@ void Design::update()
 
    if (accum > next)
    {
+      if (score > 0 && !(score % 5))
+      {
+         level++;
+         next -= 250;
+      }
+
       Reflectivity whitish = Reflectivity(white);
-      iPhysics* fallingBox = CreatePhysicsBox(-5, -5, -5, 5, 5, 5, &whitish, 1, PHYS_Falling, true);
+      iPhysics* fallingBox = CreatePhysicsBox(-8, -8, -8, 8, 8, 8, &whitish, 1, PHYS_Falling, true);
 
       fallingBox->translate(-350, 350, 0);
       srand(time(0));
-      fallingBox->setVelocity(Vector(rand() % 40, rand() % 30, 0));
+      fallingBox->setVelocity(Vector(rand() % 40 + 10 * level, -20, 0));
       fallingBox->addBodyForce(Vector(0, -10, 0));
       fallingBox->setCollision(CreateCSphere(fallingBox, 5));
       objects.insert(objects.end(), fallingBox);
 
       accum = 0;
-      next = 2000;
 
       if (next < 0)
       {
@@ -268,7 +280,7 @@ void Design::update()
       iPhysics* object = *itr;
       Vector position = object->position();
 
-      if (position.y < stretchPos.y)
+      if (position.y < stretchPos.y - 5 + bottom)
       {
          if (--life < 0)
          {
