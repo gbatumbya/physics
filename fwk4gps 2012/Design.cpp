@@ -76,17 +76,17 @@ void Design::initialize() {
    lasttextupdate=now;
 
    // game ----------------------------------------------------------------------
-   stretcher = CreatePhysicsBox(-40, -5, 0, 40, 5, 0, &bluish, 1, PHYS_Floating, true);
+   setBackground(CreateTexture(L"farm.png"));
+   catcher = CreatePhysicsBox(-40, -5, 0, 40, 5, 0, &bluish, 1, PHYS_Floating, true);
    iAPIWindow* win = getWindow();
-   stretcher->translate(0, 0, 0);
+   catcher->translate(0, -70, 0);
 
-   building = CreateObject(CreateBox(0, 0, 0, 100, 550, 0), &redish);
-   building->translate(-400, 200, 0);
+   truck = CreatePhysicsBox(-100, -2, 0, 100, 2, 0, &redish, 1, PHYS_Floating, true);
+   truck->translate(300, -50, 0);
 
-   ambulance = CreatePhysicsBox(-100, -20, 0, 100, 20, 0, &whitish, 1, PHYS_Floating, true);
-   ambulance->translate(400, -20, 0);
+   Reflectivity yellowish = Reflectivity(yellow);
 
-   iPhysics* fallingBox = CreatePhysicsBox(-8, -8, -8, 8, 8, 8, &whitish, 1, PHYS_Falling, true);
+   iPhysics* fallingBox = CreatePhysicsBox(-10, -10, -10, 10, 10, 10, &yellowish, 1, PHYS_Falling, true);
    fallingBox->translate(-350, 350, 0);
    fallingBox->setVelocity(Vector(5, 20, 0));
    fallingBox->addBodyForce(Vector(0, -10, 0));
@@ -160,9 +160,9 @@ void Design::update()
    }
 
    if (translate)
-      stretcher->translate(dX, 0, 0);
+      catcher->translate(dX, 0, 0);
    if (rotate)
-      stretcher->rotatez(wZ);
+      catcher->rotatez(wZ);
 
 
    const CollisionContact* cc;
@@ -184,11 +184,11 @@ void Design::update()
          iPhysics* g1 = cc->g1->getPhysics();
          iPhysics* g2 = cc->g2->getPhysics();
 
-         if(g1 == stretcher && g2 != stretcher)
+         if(g1 == catcher && g2 != catcher)
          {
-            if (g2 == ambulance)
+            if (g2 == catcher)
             {
-               stretcher->translate(-dX, 0, 0);
+               catcher->translate(-dX, 0, 0);
                continue;
             }
 
@@ -206,8 +206,8 @@ void Design::update()
 
             // apply the force to both objects
             cc->g2->getPhysics()->addimpulseForce(-1 * force);
-            // lose 2% of velocity
-            cc->g2->getPhysics()->setVelocity(0.8f * (g2->velocity() + (-J * n)/ cc->g2->getPhysics()->mass()));
+            // lose 4% of velocity
+            cc->g2->getPhysics()->setVelocity(0.6f * (g2->velocity() + (-J * n)/ cc->g2->getPhysics()->mass()));
 
             //push objects apart so that it doesn't keep colliding
             float massTotal = (cc->g1->getPhysics()->mass() + cc->g2->getPhysics()->mass()) * 0.85f;
@@ -219,11 +219,11 @@ void Design::update()
             cc->g2->getPhysics()->translate(g2deltap.x,g2deltap.y,g2deltap.z);
          }
 
-         if (g1 == ambulance && g2 != ambulance)
+         if (g1 == truck && g2 != truck)
          {
-            if (g2 == stretcher)
+            if (g2 == catcher)
             {
-               stretcher->translate(-dX, 0, 0);
+               catcher->translate(-dX, 0, 0);
             }
 
             if (std::find(objects.begin(), objects.end(), g2) == objects.end())
@@ -254,8 +254,8 @@ void Design::update()
          next -= 250;
       }
 
-      Reflectivity whitish = Reflectivity(white);
-      iPhysics* fallingBox = CreatePhysicsBox(-8, -8, -8, 8, 8, 8, &whitish, 1, PHYS_Falling, true);
+      Reflectivity yellowish = Reflectivity(yellow);
+      iPhysics* fallingBox = CreatePhysicsBox(-10, -10, -10, 10, 10, 10, &yellowish, 1, PHYS_Falling, true);
 
       fallingBox->translate(-350, 350, 0);
       srand(time(0));
@@ -272,7 +272,7 @@ void Design::update()
       }
    }
 
-   Vector stretchPos = stretcher->position();
+   Vector stretchPos = catcher->position();
    LIST_iPHYSICS::iterator itr = objects.begin();
 
    while (itr != objects.end())
